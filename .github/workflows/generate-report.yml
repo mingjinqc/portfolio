@@ -2,10 +2,17 @@ name: Generate Automation Report
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "report.json"
       - "selenium/**"
       - "playwright/**"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   generate-report:
@@ -13,7 +20,7 @@ jobs:
 
     steps:
       # Step 1: Checkout the repository
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       # Step 2: Read configuration from report.json
@@ -25,15 +32,24 @@ jobs:
           echo "framework=$FRAMEWORK" >> $GITHUB_OUTPUT
           echo "language=$LANGUAGE" >> $GITHUB_OUTPUT
 
-      # Step 3: Run Selenium (Java)
+      # Step 3: Cache Maven dependencies (for Selenium Java)
+      - name: Cache Maven dependencies
+        if: ${{ steps.config.outputs.framework == 'selenium' && steps.config.outputs.language == 'java' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      # Step 4: Run Selenium (Java)
       - name: Run Selenium Java Automation
         if: ${{ steps.config.outputs.framework == 'selenium' && steps.config.outputs.language == 'java' }}
         run: |
           echo "Running Selenium Java tests..."
           cd selenium/java
-          mvn test
+          mvn -B compile exec:java -Dexec.mainClass="com.example.ReportGenerator"
 
-      # Step 4: Run Playwright (Python)
+      # Step 5: Run Playwright (Python)
       - name: Run Playwright Python Automation
         if: ${{ steps.config.outputs.framework == 'playwright' && steps.config.outputs.language == 'python' }}
         run: |
@@ -42,13 +58,14 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
+          playwright install --with-deps chromium
           python ReportGenerator.py
 
-      # Step 5: Commit and push generated report (if any)
+      # Step 6: Commit and push generated report (if any)
       - name: Commit report output
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add docs/report.html docs/*.png || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
           git commit -m "Update report [skip ci]" || echo "No changes to commit"
           git push
