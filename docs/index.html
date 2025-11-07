@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Automation Portfolio – Selenium & Playwright</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 40px auto;
+      max-width: 900px;
+      line-height: 1.6;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .highlight {
+      background: #f0f8ff;
+      border-left: 5px solid #0078d7;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 2em;
+    }
+    .projects {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5em;
+    }
+    @media (min-width: 768px) {
+      .projects {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .project-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 1em 1.2em;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s ease;
+    }
+    .project-card:hover {
+      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    }
+    .project-card p {
+      margin: 0.5em 0 1em;
+    }
+    a.report-link {
+      display: inline-block;
+      background: #0078d7;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a.report-link:hover {
+      background: #005fa3;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3em;
+      font-size: 0.9em;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Automation Portfolio</h1>
+
+  <div id="config" class="highlight">
+    Loading current configuration...
+  </div>
+
+  <section>
+    <h2>🧠 Projects</h2>
+    <div class="projects">
+      
+      <!-- Selenium (Java) -->
+      <div class="project-card">
+        <h3>🧩 Selenium (Java)</h3>
+        <p>
+          Automates <a href="https://login.salesforce.com" target="_blank">Salesforce login</a>
+          using <strong>Selenium with Java</strong>. Reads the <code>username</code> from
+          <code>report.json</code>, fills and clears the field, and captures screenshots.
+        </p>
+        <a class="report-link" href="selenium/java/docs/report.html" target="_blank">View Selenium Report</a>
+      </div>
+
+      <!-- Playwright (Python) -->
+      <div class="project-card">
+        <h3>🎭 Playwright (Python)</h3>
+        <p>
+          Uses <strong>Playwright with Python</strong> to perform the same login test on Salesforce.
+          It reads <code>username</code> from <code>report.json</code>, fills and clears the input,
+          and generates an HTML report with screenshots.
+        </p>
+        <a class="report-link" href="playwright/python/docs/report.html" target="_blank">View Playwright Report</a>
+      </div>
+
+      <!-- Postman (JavaScript) -->
+      <div class="project-card">
+        <h3>📬 Postman (JavaScript)</h3>
+        <p>
+          Demonstrates <strong>API automation using Postman and JavaScript</strong>.
+          Runs a collection that tests API endpoints such as Salesforce authentication.
+          Test results are exported in HTML and published automatically via GitHub Pages.
+        </p>
+        <a class="report-link" href="postman/javascript/docs/report.html" target="_blank">
+          View Postman Report
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>⚙️ How It Works</h2>
+    <p>
+      When you update <code>report.json</code> (e.g., changing <code>username</code>,
+      <code>framework</code>, or <code>language</code>), GitHub Actions automatically:
+    </p>
+    <ol>
+      <li>Detects the update and runs the appropriate framework test</li>
+      <li>Generates a detailed HTML test report with screenshots</li>
+      <li>Publishes the report to GitHub Pages</li>
+    </ol>
+  </section>
+
+  <footer>
+    © 2025 Automation Portfolio · Powered by GitHub Actions
+  </footer>
+
+  <script>
+    async function loadConfig() {
+      try {
+        const res = await fetch('report.json');
+        if (!res.ok) throw new Error('Cannot load report.json');
+        const data = await res.json();
+
+        const username = data.username || '(not set)';
+        const framework = data.framework || '(unknown)';
+        const language = data.language || '(unknown)';
+
+        document.getElementById('config').innerHTML = `
+          <p><strong>Username:</strong> ${username}</p>
+          <p><strong>Framework:</strong> ${framework.toUpperCase()}</p>
+          <p><strong>Language:</strong> ${language.toUpperCase()}</p>
+        `;
+      } catch (e) {
+        document.getElementById('config').innerHTML =
+          '⚠️ Unable to load report.json';
+      }
+    }
+
+    loadConfig();
+  </script>
+</body>
+</html>
