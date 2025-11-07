@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 # Paths
-repo_root = Path(__file__).parent.resolve()
+repo_root = Path(__file__).resolve().parents[2]  # moves up to portfolio/
 json_path = repo_root / "report.json"
 report_dir = repo_root / "docs"
 report_dir.mkdir(exist_ok=True)
