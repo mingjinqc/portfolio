@@ -137,10 +137,11 @@
   </footer>
 
   <script>
-    // Display local last updated timestamp
     const footerDate = document.getElementById("last-updated");
     const now = new Date();
-    footerDate.textContent = "Last updated: " + now.toLocaleString();
+    const options = { year: "numeric", month: "short", day: "numeric" };
+    const formattedDate = now.toLocaleDateString("en-US", options);
+    footerDate.textContent = `Last updated: ${formattedDate}`;
   </script>
 
 </body>
