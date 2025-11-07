@@ -21,7 +21,7 @@ public class ReportGenerator {
     }
 
     public static void main(String[] args) {
-        Path repoRoot = Path.of("").toAbsolutePath();
+        Path repoRoot = Path.of("").toAbsolutePath().getParent().getParent();
         Path jsonPath = repoRoot.resolve("report.json");
         Path reportDir = repoRoot.resolve("docs");
 
