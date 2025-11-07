@@ -66,6 +66,9 @@
       background: #005fa3;
       transform: translateY(-2px);
     }
+    a.report-link + a.report-link {
+      margin-left: 8px;
+    }
     footer {
       text-align: center;
       margin-top: 3em;
@@ -91,7 +94,10 @@
             run a headless browser, capture screenshots after filling and clearing a field, and generate an HTML report.
           </p>
           <a class="report-link" href="https://github.com/mingjinqc/selenium-report/" target="_blank" rel="noopener noreferrer">
-            View Selenium Project
+            View Project
+          </a>
+          <a class="report-link" href="https://mingjinqc.github.io/selenium-report/report.html" target="_blank" rel="noopener noreferrer">
+            View Report
           </a>
         </div>
 
@@ -103,7 +109,10 @@
             run a headless browser, capture screenshots after filling and clearing a field, and generate an HTML report.
           </p>
           <a class="report-link" href="https://github.com/mingjinqc/playwright-project/" target="_blank" rel="noopener noreferrer">
-            View Playwright Project
+            View Project
+          </a>
+          <a class="report-link" href="https://mingjinqc.github.io/playwright-report/report.html" target="_blank" rel="noopener noreferrer">
+            View Report
           </a>
         </div>
 
@@ -123,8 +132,16 @@
   </main>
 
   <footer>
-    © 2025 Automation Portfolio · Powered by GitHub Actions
+    © 2025 Automation Portfolio · Powered by GitHub Actions  
+    <div id="last-updated"></div>
   </footer>
+
+  <script>
+    // Display local last updated timestamp
+    const footerDate = document.getElementById("last-updated");
+    const now = new Date();
+    footerDate.textContent = "Last updated: " + now.toLocaleString();
+  </script>
 
 </body>
 </html>
