@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -13,23 +12,30 @@ step1 = report_dir / "step1.png"
 step2 = report_dir / "step2.png"
 report_html = report_dir / "report.html"
 
-# Read username
-def read_username():
+
+# --- Read configuration from report.json ---
+def read_config():
     try:
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("username", "")
+            return {
+                "username": data.get("username", ""),
+                "framework": data.get("framework", "(unknown)"),
+                "language": data.get("language", "(unknown)"),
+            }
     except Exception as e:
         print(f"❌ Failed to read {json_path}: {e}")
-        return ""
+        return {"username": "", "framework": "(error)", "language": "(error)"}
 
-def generate_html_report(step1_img, step2_img, filled_ok, cleared_ok, username):
+
+# --- Generate HTML report ---
+def generate_html_report(step1_img, step2_img, filled_ok, cleared_ok, username, framework, language):
     html = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Playwright Test Report</title>
+  <title>Automation Test Report</title>
   <style>
     body {{ font-family: Arial, sans-serif; padding: 18px; }}
     table {{ border-collapse: collapse; width: 100%; max-width: 900px; }}
@@ -41,8 +47,11 @@ def generate_html_report(step1_img, step2_img, filled_ok, cleared_ok, username):
   </style>
 </head>
 <body>
-<h1>Automated Playwright Test Report</h1>
+<h1>Automated Test Report</h1>
 <p><strong>Username value used:</strong> {username or "(Not Found in report.json)"}</p>
+<p><strong>Framework:</strong> {framework}</p>
+<p><strong>Language:</strong> {language}</p>
+
 <table>
   <thead>
     <tr><th>No.</th><th>Step</th><th>Result</th><th>Screenshot</th></tr>
@@ -62,16 +71,23 @@ def generate_html_report(step1_img, step2_img, filled_ok, cleared_ok, username):
     </tr>
   </tbody>
 </table>
-<p>Generated automatically by <b>Playwright</b>.</p>
+
+<p>Generated automatically by <b>{framework}</b> ({language}).</p>
 </body>
 </html>"""
     report_html.write_text(html, encoding="utf-8")
     print(f"📄 Report generated: {report_html.absolute()}")
 
-def run_test():
-    username = read_username()
 
-    print("🌐 Launching browser...")
+# --- Run the test and capture screenshots ---
+def run_test():
+    config = read_config()
+    username = config["username"]
+    framework = config["framework"]
+    language = config["language"]
+
+    print(f"🌐 Running test for {framework.upper()} in {language.upper()}")
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(viewport={"width": 1920, "height": 1080})
@@ -84,14 +100,12 @@ def run_test():
         try:
             username_field = page.locator("#username")
             username_field.fill(username)
-            filled_value = username_field.input_value()
-            filled_ok = bool(username and filled_value == username)
+            filled_ok = bool(username and username_field.input_value() == username)
             page.screenshot(path=step1)
             print(f"📸 step1.png captured — username filled check: {'PASS' if filled_ok else 'FAIL'}")
 
-            username_field.fill("")  # clear
-            cleared_value = username_field.input_value()
-            cleared_ok = cleared_value == ""
+            username_field.fill("")
+            cleared_ok = username_field.input_value() == ""
             page.screenshot(path=step2)
             print(f"📸 step2.png captured — username cleared check: {'PASS' if cleared_ok else 'FAIL'}")
 
@@ -100,7 +114,8 @@ def run_test():
         finally:
             browser.close()
 
-        generate_html_report(step1.name, step2.name, filled_ok, cleared_ok, username)
+        generate_html_report(step1.name, step2.name, filled_ok, cleared_ok, username, framework, language)
+
 
 if __name__ == "__main__":
     run_test()
