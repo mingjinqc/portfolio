@@ -1,0 +1,54 @@
+name: Generate Automation Report
+
+on:
+  push:
+    paths:
+      - "report.json"
+      - "selenium/**"
+      - "playwright/**"
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Read configuration from report.json
+      - name: Parse report.json
+        id: config
+        run: |
+          FRAMEWORK=$(jq -r '.framework' report.json)
+          LANGUAGE=$(jq -r '.language' report.json)
+          echo "framework=$FRAMEWORK" >> $GITHUB_OUTPUT
+          echo "language=$LANGUAGE" >> $GITHUB_OUTPUT
+
+      # Step 3: Run Selenium (Java)
+      - name: Run Selenium Java Automation
+        if: ${{ steps.config.outputs.framework == 'selenium' && steps.config.outputs.language == 'java' }}
+        run: |
+          echo "Running Selenium Java tests..."
+          cd selenium/java
+          mvn test
+
+      # Step 4: Run Playwright (Python)
+      - name: Run Playwright Python Automation
+        if: ${{ steps.config.outputs.framework == 'playwright' && steps.config.outputs.language == 'python' }}
+        run: |
+          echo "Running Playwright Python tests..."
+          cd playwright/python
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python ReportGenerator.py
+
+      # Step 5: Commit and push generated report (if any)
+      - name: Commit report output
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/report.html docs/*.png || true
+          git commit -m "Update report [skip ci]" || echo "No changes to commit"
+          git push
