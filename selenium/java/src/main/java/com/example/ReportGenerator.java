@@ -14,12 +14,17 @@ import java.time.Duration;
 
 public class ReportGenerator {
 
+    private static class Config {
+        String username = "";
+        String framework = "(unknown)";
+        String language = "(unknown)";
+    }
+
     public static void main(String[] args) {
         Path repoRoot = Path.of("").toAbsolutePath();
         Path jsonPath = repoRoot.resolve("report.json");
         Path reportDir = repoRoot.resolve("docs");
 
-        // Ensure docs folder exists
         try {
             if (!Files.exists(reportDir)) Files.createDirectories(reportDir);
         } catch (IOException e) {
@@ -27,19 +32,16 @@ public class ReportGenerator {
             return;
         }
 
-        String username = readUsername(jsonPath);
-        if (username == null) {
-            System.err.println("❌ username not found in " + jsonPath);
-            username = ""; // use empty so browser runs for screenshot
-        }
+        Config cfg = readConfig(jsonPath);
+        String username = cfg.username;
+        String framework = cfg.framework;
+        String language = cfg.language;
+
+        System.out.printf("🌐 Running test for %s in %s%n", framework.toUpperCase(), language.toUpperCase());
 
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--window-size=1920,1080");
-        options.addArguments("--disable-gpu");
+        options.addArguments("--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--window-size=1920,1080", "--disable-gpu");
 
         WebDriver driver = null;
         boolean isFilled = false;
@@ -52,9 +54,8 @@ public class ReportGenerator {
             driver = new ChromeDriver(options);
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
 
-            // Navigate to Salesforce login page
             driver.get("https://login.salesforce.com/");
-            System.out.println("🌐 Opened Salesforce login page");
+            System.out.println("✅ Opened Salesforce login page");
 
             WebElement usernameField = null;
             try {
@@ -63,33 +64,25 @@ public class ReportGenerator {
                 System.err.println("❌ Username field not found on page.");
             }
 
-            // Step 1 — try to fill username and verify
             if (usernameField != null) {
                 usernameField.sendKeys(username);
                 String filledValue = usernameField.getAttribute("value");
                 isFilled = !username.isEmpty() && filledValue.equals(username);
-            } else {
-                isFilled = false;
             }
-
             takeScreenshot(driver, step1.toFile());
             System.out.println("📸 step1.png captured — username filled check: " + (isFilled ? "PASS" : "FAIL"));
 
-            // Step 2 — clear field only if available
             if (usernameField != null) {
                 usernameField.clear();
                 String clearedValue = usernameField.getAttribute("value");
                 isCleared = clearedValue.isEmpty();
-            } else {
-                isCleared = false;
             }
-
             takeScreenshot(driver, step2.toFile());
             System.out.println("📸 step2.png captured — username cleared check: " + (isCleared ? "PASS" : "FAIL"));
 
-            // Generate report
             Path reportHtml = reportDir.resolve("report.html");
-            generateHtmlReport(reportHtml, step1.getFileName().toString(), step2.getFileName().toString(), isFilled, isCleared, username);
+            generateHtmlReport(reportHtml, step1.getFileName().toString(), step2.getFileName().toString(),
+                    isFilled, isCleared, username, framework, language);
             System.out.println("📄 Report generated at: " + reportHtml.toAbsolutePath());
 
         } catch (Exception e) {
@@ -101,15 +94,18 @@ public class ReportGenerator {
         }
     }
 
-    private static String readUsername(Path jsonPath) {
+    private static Config readConfig(Path jsonPath) {
+        Config cfg = new Config();
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(jsonPath.toFile());
-            if (root.has("username")) return root.get("username").asText();
+            if (root.has("username")) cfg.username = root.get("username").asText();
+            if (root.has("framework")) cfg.framework = root.get("framework").asText();
+            if (root.has("language")) cfg.language = root.get("language").asText();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return cfg;
     }
 
     private static void takeScreenshot(WebDriver driver, File outFile) throws IOException {
@@ -119,27 +115,32 @@ public class ReportGenerator {
         }
     }
 
-    private static void generateHtmlReport(Path target, String step1Name, String step2Name, boolean filledOk, boolean clearedOk, String username) throws IOException {
+    private static void generateHtmlReport(Path target, String step1Name, String step2Name,
+                                           boolean filledOk, boolean clearedOk,
+                                           String username, String framework, String language) throws IOException {
         String html = """
             <!doctype html>
             <html lang="en">
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Test Report</title>
+              <title>Automation Test Report</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 18px; }
                 table { border-collapse: collapse; width: 100%%; max-width: 900px; }
-                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
                 th { background: #f2f2f2; }
                 .pass { color: green; font-weight: bold; }
                 .fail { color: red; font-weight: bold; }
-                img.sshot { max-width: 320px; height: auto; border: 1px solid #999; }
+                img.sshot { max-width: 320px; border: 1px solid #999; }
               </style>
             </head>
             <body>
-            <h1>Automated Selenium Test Report</h1>
+            <h1>Automated Test Report</h1>
             <p><strong>Username value used:</strong> %s</p>
+            <p><strong>Framework:</strong> %s</p>
+            <p><strong>Language:</strong> %s</p>
+
             <table>
               <thead>
                 <tr><th>No.</th><th>Step</th><th>Result</th><th>Screenshot</th></tr>
@@ -159,20 +160,22 @@ public class ReportGenerator {
                 </tr>
               </tbody>
             </table>
-            <p>Generated automatically by <b>ReportGenerator</b>.</p>
+            <p>Generated automatically by <b>%s</b> (%s).</p>
             </body>
             </html>
             """;
 
         String finalHtml = String.format(
-            html,
-            username.isEmpty() ? "(Not Found in report.json)" : username,
-            filledOk ? "pass" : "fail", filledOk ? "PASS" : "FAIL", step1Name,
-            clearedOk ? "pass" : "fail", clearedOk ? "PASS" : "FAIL", step2Name
+                html,
+                username.isEmpty() ? "(Not Found in report.json)" : username,
+                framework, language,
+                filledOk ? "pass" : "fail", filledOk ? "PASS" : "FAIL", step1Name,
+                clearedOk ? "pass" : "fail", clearedOk ? "PASS" : "FAIL", step2Name,
+                framework, language
         );
 
         Files.writeString(target, finalHtml,
-            java.nio.file.StandardOpenOption.CREATE,
-            java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+                java.nio.file.StandardOpenOption.CREATE,
+                java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
     }
 }
